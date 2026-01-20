@@ -5284,6 +5284,477 @@ Output
 
 
 
+======================================== ./tuana/cay gia pha.c ========================================
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// =======================
+// Khai báo cấu trúc cây
+// Biểu diễn cây theo mô hình:
+// leftMostChild – rightSibling
+// =======================
+typedef struct Node {
+    char name[256];             // Tên của node
+    struct Node *leftMostChild; // Con trái nhất
+    struct Node *rightSibling;  // Anh em bên phải
+} Node;
+
+Node *root; // Node gốc của cây
+
+// =======================
+// Tạo một node mới
+// =======================
+Node *makeNode(char *name) {
+    Node *p = (Node *)malloc(sizeof(Node)); // Cấp phát bộ nhớ
+    strcpy(p->name, name);                  // Gán tên
+    p->leftMostChild = NULL;                // Chưa có con
+    p->rightSibling = NULL;                 // Chưa có anh em
+    return p;
+}
+
+// =======================
+// Tìm node có tên = name
+// Duyệt cây theo DFS
+// =======================
+Node *find(Node *r, char *name) {
+    if (r == NULL)
+        return NULL;
+    if (strcmp(r->name, name) == 0)
+        return r;
+
+    Node *p = r->leftMostChild;
+    while (p != NULL) {
+        Node *q = find(p, name);
+        if (q != NULL)
+            return q;
+        p = p->rightSibling;
+    }
+    return NULL;
+}
+
+// =======================
+// Thêm node vào cuối danh sách anh em
+// =======================
+Node *addLast(Node *p, char *name) {
+    if (p == NULL)
+        return makeNode(name);
+    p->rightSibling = addLast(p->rightSibling, name);
+    return p;
+}
+
+// =======================
+// Thêm một node con cho node có tên = name
+// =======================
+void addChild(char *name, char *child) {
+    Node *r = find(root, name);
+    if (r == NULL)
+        return;
+    r->leftMostChild = addLast(r->leftMostChild, child);
+}
+
+// =======================
+// In cây ra màn hình
+// =======================
+void printTree(Node *r) {
+    if (r == NULL)
+        return;
+
+    // In tên node hiện tại
+    printf("%s: ", r->name);
+
+    // In danh sách con
+    Node *p = r->leftMostChild;
+    while (p != NULL) {
+        printf("%s ", p->name);
+        p = p->rightSibling;
+    }
+    printf("\n");
+
+    // Đệ quy in các cây con
+    p = r->leftMostChild;
+    while (p != NULL) {
+        printTree(p);
+        p = p->rightSibling;
+    }
+}
+
+// =======================
+// In cây ra file
+// =======================
+void printTreeF(Node *r, FILE *f) {
+    if (r == NULL)
+        return;
+
+    fprintf(f, "%s ", r->name);
+
+    Node *p = r->leftMostChild;
+    while (p != NULL) {
+        fprintf(f, "%s ", p->name);
+        p = p->rightSibling;
+    }
+    fprintf(f, " $\n");
+
+    p = r->leftMostChild;
+    while (p != NULL) {
+        printTreeF(p, f);
+        p = p->rightSibling;
+    }
+}
+
+// =======================
+// Tải cây từ file (lệnh Load)
+// =======================
+void processLoad() {
+    char filename[256];
+    scanf("%s", filename);
+
+    FILE *f = fopen(filename, "r");
+    if (f == NULL) {
+        printf("Cannot open file %s\n", filename);
+        return;
+    }
+
+    char line[512];
+    while (fgets(line, sizeof(line), f) != NULL) {
+        // Remove newline
+        line[strcspn(line, "\n")] = 0;
+
+        if (strcmp(line, "$$") == 0)
+            break;
+
+        // Parse line: "parent: child1 child2 ... $"
+        char *colon = strchr(line, ':');
+        if (colon == NULL)
+            continue;
+
+        *colon = '\0';
+        char *parentName = line;
+        char *childrenPart = colon + 2; // Skip ": "
+
+        // Remove the trailing " $"
+        int len = strlen(childrenPart);
+        if (len > 0 && childrenPart[len - 1] == '$') {
+            childrenPart[len - 2] = '\0';
+        }
+
+        // If it's the root node
+        if (root == NULL) {
+            root = makeNode(parentName);
+        }
+
+        // Parse children
+        char *token = strtok(childrenPart, " ");
+        while (token != NULL) {
+            addChild(parentName, token);
+            token = strtok(NULL, " ");
+        }
+    }
+
+    fclose(f);
+    printf("Loaded from %s\n", filename);
+}
+
+// =======================
+// In cây ra màn hình (lệnh Print)
+// =======================
+void processPrint() {
+    if (root == NULL) {
+        printf("Tree is empty\n");
+        return;
+    }
+    printTree(root);
+}
+
+// =======================
+// Thêm con cho một node (lệnh AddChild)
+// =======================
+void processAddChild() {
+    char parentName[256], childName[256];
+    scanf("%s %s", parentName, childName);
+
+    if (root == NULL) {
+        root = makeNode(parentName);
+    }
+
+    addChild(parentName, childName);
+    printf("Added %s as child of %s\n", childName, parentName);
+}
+
+// =======================
+// Tìm node theo tên (lệnh Find)
+// =======================
+void processFind() {
+    char name[256];
+    scanf("%s", name);
+
+    Node *p = find(root, name);
+    if (p == NULL)
+        printf("Not Found %s\n", name);
+    else
+        printf("Found %s\n", name);
+}
+
+// =======================
+// Tìm và in các node con
+// =======================
+void processFindChildren() {
+    char name[256];
+    scanf("%s", name);
+
+    Node *p = find(root, name);
+    if (p == NULL)
+        printf("Not Found %s\n", name);
+    else {
+        printf("Found %s with children: ", name);
+        Node *q = p->leftMostChild;
+        while (q != NULL) {
+            printf("%s ", q->name);
+            q = q->rightSibling;
+        }
+    }
+    printf("\n");
+}
+
+// =======================
+// Tính chiều cao của cây
+// =======================
+int height(Node *p) {
+    if (p == NULL)
+        return 0;
+
+    int maxH = 0;
+    Node *q = p->leftMostChild;
+    while (q != NULL) {
+        int h = height(q);
+        maxH = (maxH < h) ? h : maxH;
+        q = q->rightSibling;
+    }
+    return maxH + 1;
+}
+
+// =======================
+// Xử lý lệnh Height
+// =======================
+void processHeight() {
+    char name[256];
+    scanf("%s", name);
+
+    Node *p = find(root, name);
+    if (p == NULL)
+        printf("Not Found %s\n", name);
+    else
+        printf("Found %s having height = %d\n", name, height(p));
+}
+
+// =======================
+// Đếm số node trong cây
+// =======================
+int count(Node *r) {
+    if (r == NULL)
+        return 0;
+
+    int cnt = 1;
+    Node *q = r->leftMostChild;
+    while (q != NULL) {
+        cnt += count(q);
+        q = q->rightSibling;
+    }
+    return cnt;
+}
+
+// =======================
+// Xử lý lệnh Count
+// =======================
+void processCount() {
+    printf("Number of members is %d\n", count(root));
+}
+
+// =======================
+// Lưu cây ra file
+// =======================
+void processStore() {
+    char filename[256];
+    scanf("%s", filename);
+
+    FILE *f = fopen(filename, "w");
+    printTreeF(root, f);
+    fprintf(f, "$$");
+    fclose(f);
+}
+
+// =======================
+// Giải phóng bộ nhớ cây
+// =======================
+void freeTree(Node *r) {
+    if (r == NULL)
+        return;
+
+    Node *p = r->leftMostChild;
+    while (p != NULL) {
+        Node *sp = p->rightSibling;
+        freeTree(p);
+        p = sp;
+    }
+    printf("free node %s\n", r->name);
+    free(r);
+}
+
+// =======================
+// Hàm main
+// =======================
+int main() {
+    while (1) {
+        char cmd[256];
+        printf("Enter command: ");
+        scanf("%s", cmd);
+
+        if (strcmp(cmd, "Quit") == 0)
+            break;
+        else if (strcmp(cmd, "Load") == 0)
+            processLoad();
+        else if (strcmp(cmd, "Print") == 0)
+            processPrint();
+        else if (strcmp(cmd, "Find") == 0)
+            processFind();
+        else if (strcmp(cmd, "FindChildren") == 0)
+            processFindChildren();
+        else if (strcmp(cmd, "Height") == 0)
+            processHeight();
+        else if (strcmp(cmd, "Count") == 0)
+            processCount();
+        else if (strcmp(cmd, "AddChild") == 0)
+            processAddChild();
+        else if (strcmp(cmd, "Store") == 0)
+            processStore();
+    }
+
+    freeTree(root);
+    return 0;
+}
+
+
+
+======================================== ./tuana/cay tien to.c ========================================
+
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define ALPHABET_SIZE 26
+// Định nghĩa cấu trúc dữ liệu nút cho cây prefix
+// cây chỉ chứa các từ tiếng anh chữ thường
+// Dùng mảng số 0-25 cho chữ cái từ a-z (trừ độ lệch
+'a')
+struct TrieNode {
+    struct TrieNode *children[ALPHABET_SIZE];
+    bool isEndOfWord; // đánh dấu trạng thái kết thúc
+    của từ
+};
+// Hàm tạo nút mới bằng cách cấp phát động nút mới
+// và khởi tạo giá trị các nút con của nút mới là
+NULL struct TrieNode *createNode() {
+    struct TrieNode *pNode = (struct TrieNode *)malloc(sizeof(struct TrieNode));
+    pNode->isEndOfWord = false;
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        pNode->children[i] = NULL;
+    }
+    return pNode;
+}
+// Hàm tạo nút mới bằng cách cấp phát động nút mới
+// và khởi tạo giá trị các nút con của nút mới là NULL
+struct TrieNode *createNode() {
+    struct TrieNode *pNode = (struct TrieNode *)malloc(sizeof(struct TrieNode));
+    pNode->isEndOfWord = false;
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        pNode->children[i] = NULL;
+    }
+    return pNode;
+}
+// Hàm thêm từ vào cây prefix
+void insertWord(struct TrieNode *root, const char *word) {
+    struct TrieNode *currentNode = root;
+    for (int i = 0; word[i] != '\0'; i++) {
+        int index = word[i] - 'a';
+        if (!currentNode->children[index]) {
+            currentNode->children[index] = createNode();
+        }
+        currentNode = currentNode->children[index];
+    }
+    currentNode->isEndOfWord = true;
+}
+// Hàm kiểm tra từ có trong cây prefix hay không
+bool searchWord(struct TrieNode *root, const char *word) {
+    struct TrieNode *currentNode = root;
+    for (int i = 0; word[i] != '\0'; i++) {
+        int index = word[i] - 'a';
+        if (!currentNode->children[index]) {
+            return false;
+        }
+        currentNode = currentNode->children[index];
+    }
+    return (currentNode != NULL && currentNode > isEndOfWord);
+}
+// Hàm duyệt và in ra tất cả các từ trong cây prefix
+word là mảng chứa các ký tự ở phía trước.Level
+    là số lượng ký tự trong mảng word tới thời điểm hiện tại void
+    traverseTrie(struct TrieNode *root, char word[], int level) {
+    if (root->isEndOfWord) {
+        word[level] = '\0';
+        printf("%s\n", word);
+    }
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        if (root->children[i]) {
+            word[level] = 'a' + i;
+            traverseTrie(root->children[i], word, level + 1);
+        }
+    }
+    24
+}
+// Hàm kiểm tra từ có trong cây prefix hay không
+void printPrefixWords(struct TrieNode *root, const char *word) {
+    struct TrieNode *currentNode = root;
+    // đi theo danh sách prefix
+    for (int i = 0; word[i] != '\0'; i++) {
+        int index = word[i] - 'a';
+        if (!currentNode->children[index]) {
+            return;
+        }
+        currentNode = currentNode->children[index];
+    }
+    if (currentNode == NULL)
+        return;
+    // Duyệt và in ra tất cả các từ trong cây prefix
+    char prefixWord[50];
+    strcpy(prefixWord, word);
+    int level = strlen(prefixWord);
+    traverseTrie(currentNode, prefixWord, level);
+}
+// Hàm main để thử nghiệm cây prefix
+int main() {
+    struct TrieNode *root = createNode();
+    // Thêm các từ vào cây prefix
+    insertWord(root, "hello");
+    insertWord(root, "world");
+    insertWord(root, "hi");
+    insertWord(root, "hey");
+    // Kiểm tra từ có trong cây prefix hay không
+    printf("Does 'hello' exist in the trie? %s\n",
+           searchWord(root, "hello") ? "Yes" : "No");
+    printf("Does 'world' exist in the trie? %s\n",
+           searchWord(root, "world") ? "Yes" : "No");
+    printf("Does 'hey' exist in the trie? %s\n",
+           searchWord(root, "hey") ? "Yes" : "No");
+    printf("Does 'how' exist in the trie? %s\n",
+           searchWord(root, "how") ? "Yes" : "No");
+    // in ra các từ có cùng prefix là "he" --> hello và hey
+    printPrefixWords(root, "he");
+    return 0;
+}
+
+
+
 ======================================== ./tuana/cay.c ========================================
 
 #include <stdio.h>
@@ -5704,172 +6175,63 @@ Output
 */
 
 
-======================================== ./tuana/k/main.c ========================================
+======================================== ./tuana/ham bam.c ========================================
 
 #include <stdio.h>
 #include <stdlib.h>
 
-// Định nghĩa cấu trúc nút của cây nhị phân
+#define SIZE 10 // kích thước bảng băm
+
+// Node của linked list
 typedef struct Node {
-    int data;               // dữ liệu của nút
-    struct Node *left;      // con trái
-    struct Node *right;     // con phải
+    int key;
+    struct Node *next;
 } Node;
 
-// Hàm tạo nút mới
-Node* createNode(int value) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
-    newNode->data = value;
-    newNode->left = newNode->right = NULL;
-    return newNode;
+// Mảng các head (mỗi phần tử là con trỏ tới linked list)
+Node *hashTable[SIZE];
+
+// Hàm băm đơn giản
+int hashFunction(int key) {
+    return key % SIZE;
 }
 
-// Hàm chèn phần tử vào BST
-Node* insert(Node* root, int value) {
-    if (root == NULL) return createNode(value); // nếu cây rỗng, tạo nút mới
-    if (value < root->data) root->left = insert(root->left, value);   // chèn vào cây con trái
-    else if (value > root->data) root->right = insert(root->right, value); // chèn vào cây con phải
-    return root;
+// Thêm phần tử vào bảng băm
+void insert(int key) {
+    int index = hashFunction(key);
+    Node *newNode = (Node *)malloc(sizeof(Node));
+    newNode->key = key;
+    newNode->next = hashTable[index]; // chèn vào đầu linked list
+    hashTable[index] = newNode;
 }
 
-// Hàm tìm giá trị nhỏ nhất (dùng khi xóa)
-Node* findMin(Node* root) {
-    while (root->left != NULL) root = root->left;
-    return root;
-}
-
-// Hàm xóa một nút trong BST
-Node* deleteNode(Node* root, int value) {
-    if (root == NULL) return NULL;
-    if (value < root->data) root->left = deleteNode(root->left, value);
-    else if (value > root->data) root->right = deleteNode(root->right, value);
-    else {
-        // Trường hợp tìm thấy nút cần xóa
-        if (root->left == NULL) {
-            Node* temp = root->right;
-            free(root);
-            return temp;
-        } else if (root->right == NULL) {
-            Node* temp = root->left;
-            free(root);
-            return temp;
-        } else {
-            // Nút có 2 con: tìm nút nhỏ nhất bên phải
-            Node* temp = findMin(root->right);
-            root->data = temp->data;
-            root->right = deleteNode(root->right, temp->data);
+// In bảng băm
+void display() {
+    for (int i = 0; i < SIZE; i++) {
+        printf("Bucket %d: ", i);
+        Node *temp = hashTable[i];
+        while (temp) {
+            printf("%d -> ", temp->key);
+            temp = temp->next;
         }
-    }
-    return root;
-}
-
-// Các kiểu duyệt cây
-void preorder(Node* root) { // NLR
-    if (root == NULL) return;
-    printf("%d ", root->data);
-    preorder(root->left);
-    preorder(root->right);
-}
-
-void inorder(Node* root) { // LNR
-    if (root == NULL) return;
-    inorder(root->left);
-    printf("%d ", root->data);
-    inorder(root->right);
-}
-
-void postorder(Node* root) { // LRN
-    if (root == NULL) return;
-    postorder(root->left);
-    postorder(root->right);
-    printf("%d ", root->data);
-}
-
-// Duyệt theo mức (Level-order) dùng Queue
-typedef struct Queue {
-    Node* nodes[100];
-    int front, rear;
-} Queue;
-
-void initQueue(Queue* q) {
-    q->front = q->rear = 0;
-}
-
-int isEmpty(Queue* q) {
-    return q->front == q->rear;
-}
-
-void enqueue(Queue* q, Node* node) {
-    q->nodes[q->rear++] = node;
-}
-
-Node* dequeue(Queue* q) {
-    return q->nodes[q->front++];
-}
-
-void levelOrder(Node* root) {
-    if (root == NULL) return;
-    Queue q;
-    initQueue(&q);
-    enqueue(&q, root);
-    while (!isEmpty(&q)) {
-        Node* current = dequeue(&q);
-        printf("%d ", current->data);
-        if (current->left) enqueue(&q, current->left);
-        if (current->right) enqueue(&q, current->right);
+        printf("NULL\n");
     }
 }
 
-// Hàm tính chiều cao của cây
-int height(Node* root) {
-    if (root == NULL) return 0;
-    int leftHeight = height(root->left);
-    int rightHeight = height(root->right);
-    return (leftHeight > rightHeight ? leftHeight : rightHeight) + 1;
-}
-
-// Hàm tìm kiếm trong BST
-Node* search(Node* root, int value) {
-    if (root == NULL || root->data == value) return root;
-    if (value < root->data) return search(root->left, value);
-    else return search(root->right, value);
-}
-
-// Chương trình chính
 int main() {
-    Node* root = NULL;
+    // Khởi tạo bảng băm rỗng
+    for (int i = 0; i < SIZE; i++)
+        hashTable[i] = NULL;
 
-    // Chèn các phần tử vào BST
-    int values[] = {50, 30, 70, 20, 40, 60, 80};
-    int n = sizeof(values)/sizeof(values[0]);
-    for (int i = 0; i < n; i++) {
-        root = insert(root, values[i]);
-    }
+    // Thêm dữ liệu
+    insert(15);
+    insert(25);
+    insert(35);
+    insert(7);
+    insert(17);
 
-    printf("Duyet Pre-order: ");
-    preorder(root); printf("\n");
-
-    printf("Duyet In-order: ");
-    inorder(root); printf("\n");
-
-    printf("Duyet Post-order: ");
-    postorder(root); printf("\n");
-
-    printf("Duyet Level-order: ");
-    levelOrder(root); printf("\n");
-
-    printf("Chieu cao cay: %d\n", height(root));
-
-    // Tìm kiếm
-    int key = 40;
-    Node* found = search(root, key);
-    if (found) printf("Tim thay %d trong cay\n", key);
-    else printf("Khong tim thay %d\n", key);
-
-    // Xóa một nút
-    root = deleteNode(root, 30);
-    printf("Cay sau khi xoa 30 (In-order): ");
-    inorder(root); printf("\n");
+    // Hiển thị
+    display();
 
     return 0;
 }
