@@ -5284,6 +5284,202 @@ Output
 
 
 
+======================================== ./tuana/cay.c ========================================
+
+#include <stdio.h>
+#include <stdlib.h>
+
+// Định nghĩa cấu trúc nút của cây nhị phân
+typedef struct Node {
+    int data;           // dữ liệu của nút
+    struct Node *left;  // con trái
+    struct Node *right; // con phải
+} Node;
+
+// Hàm tạo nút mới
+Node *createNode(int value) {
+    Node *newNode = (Node *)malloc(sizeof(Node));
+    newNode->data = value;
+    newNode->left = newNode->right = NULL;
+    return newNode;
+}
+
+// Hàm chèn phần tử vào BST
+Node *insert(Node *root, int value) {
+    if (root == NULL)
+        return createNode(value); // nếu cây rỗng, tạo nút mới
+    if (value < root->data)
+        root->left = insert(root->left, value); // chèn vào cây con trái
+    else if (value > root->data)
+        root->right = insert(root->right, value); // chèn vào cây con phải
+    return root;
+}
+
+// Hàm tìm giá trị nhỏ nhất (dùng khi xóa)
+Node *findMin(Node *root) {
+    while (root->left != NULL)
+        root = root->left;
+    return root;
+}
+
+// Hàm xóa một nút trong BST
+Node *deleteNode(Node *root, int value) {
+    if (root == NULL)
+        return NULL;
+    if (value < root->data)
+        root->left = deleteNode(root->left, value);
+    else if (value > root->data)
+        root->right = deleteNode(root->right, value);
+    else {
+        // Trường hợp tìm thấy nút cần xóa
+        if (root->left == NULL) {
+            Node *temp = root->right;
+            free(root);
+            return temp;
+        } else if (root->right == NULL) {
+            Node *temp = root->left;
+            free(root);
+            return temp;
+        } else {
+            // Nút có 2 con: tìm nút nhỏ nhất bên phải
+            Node *temp = findMin(root->right);
+            root->data = temp->data;
+            root->right = deleteNode(root->right, temp->data);
+        }
+    }
+    return root;
+}
+
+// Các kiểu duyệt cây
+void preorder(Node *root) { // NLR
+    if (root == NULL)
+        return;
+    printf("%d ", root->data);
+    preorder(root->left);
+    preorder(root->right);
+}
+
+void inorder(Node *root) { // LNR
+    if (root == NULL)
+        return;
+    inorder(root->left);
+    printf("%d ", root->data);
+    inorder(root->right);
+}
+
+void postorder(Node *root) { // LRN
+    if (root == NULL)
+        return;
+    postorder(root->left);
+    postorder(root->right);
+    printf("%d ", root->data);
+}
+
+// Duyệt theo mức (Level-order) dùng Queue
+typedef struct Queue {
+    Node *nodes[100];
+    int front, rear;
+} Queue;
+
+void initQueue(Queue *q) {
+    q->front = q->rear = 0;
+}
+
+int isEmpty(Queue *q) {
+    return q->front == q->rear;
+}
+
+void enqueue(Queue *q, Node *node) {
+    q->nodes[q->rear++] = node;
+}
+
+Node *dequeue(Queue *q) {
+    return q->nodes[q->front++];
+}
+
+void levelOrder(Node *root) {
+    if (root == NULL)
+        return;
+    Queue q;
+    initQueue(&q);
+    enqueue(&q, root);
+    while (!isEmpty(&q)) {
+        Node *current = dequeue(&q);
+        printf("%d ", current->data);
+        if (current->left)
+            enqueue(&q, current->left);
+        if (current->right)
+            enqueue(&q, current->right);
+    }
+}
+
+// Hàm tính chiều cao của cây
+int height(Node *root) {
+    if (root == NULL)
+        return 0;
+    int leftHeight = height(root->left);
+    int rightHeight = height(root->right);
+    return (leftHeight > rightHeight ? leftHeight : rightHeight) + 1;
+}
+
+// Hàm tìm kiếm trong BST
+Node *search(Node *root, int value) {
+    if (root == NULL || root->data == value)
+        return root;
+    if (value < root->data)
+        return search(root->left, value);
+    else
+        return search(root->right, value);
+}
+
+// Chương trình chính
+int main() {
+    Node *root = NULL;
+
+    // Chèn các phần tử vào BST
+    int values[] = {50, 30, 70, 20, 40, 60, 80};
+    int n = sizeof(values) / sizeof(values[0]);
+    for (int i = 0; i < n; i++) {
+        root = insert(root, values[i]);
+    }
+
+    printf("Duyet Pre-order: ");
+    preorder(root);
+    printf("\n");
+
+    printf("Duyet In-order: ");
+    inorder(root);
+    printf("\n");
+
+    printf("Duyet Post-order: ");
+    postorder(root);
+    printf("\n");
+
+    printf("Duyet Level-order: ");
+    levelOrder(root);
+    printf("\n");
+
+    printf("Chieu cao cay: %d\n", height(root));
+
+    // Tìm kiếm
+    int key = 40;
+    Node *found = search(root, key);
+    if (found)
+        printf("Tim thay %d trong cay\n", key);
+    else
+        printf("Khong tim thay %d\n", key);
+
+    // Xóa một nút
+    root = deleteNode(root, 30);
+    printf("Cay sau khi xoa 30 (In-order): ");
+    inorder(root);
+    printf("\n");
+
+    return 0;
+}
+
+
+
 ======================================== ./tuana/Check_Bipartite_Graph.c ========================================
 
 #include <stdio.h>
@@ -5506,6 +5702,178 @@ Input
 Output
 4
 */
+
+
+======================================== ./tuana/k/main.c ========================================
+
+#include <stdio.h>
+#include <stdlib.h>
+
+// Định nghĩa cấu trúc nút của cây nhị phân
+typedef struct Node {
+    int data;               // dữ liệu của nút
+    struct Node *left;      // con trái
+    struct Node *right;     // con phải
+} Node;
+
+// Hàm tạo nút mới
+Node* createNode(int value) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    newNode->data = value;
+    newNode->left = newNode->right = NULL;
+    return newNode;
+}
+
+// Hàm chèn phần tử vào BST
+Node* insert(Node* root, int value) {
+    if (root == NULL) return createNode(value); // nếu cây rỗng, tạo nút mới
+    if (value < root->data) root->left = insert(root->left, value);   // chèn vào cây con trái
+    else if (value > root->data) root->right = insert(root->right, value); // chèn vào cây con phải
+    return root;
+}
+
+// Hàm tìm giá trị nhỏ nhất (dùng khi xóa)
+Node* findMin(Node* root) {
+    while (root->left != NULL) root = root->left;
+    return root;
+}
+
+// Hàm xóa một nút trong BST
+Node* deleteNode(Node* root, int value) {
+    if (root == NULL) return NULL;
+    if (value < root->data) root->left = deleteNode(root->left, value);
+    else if (value > root->data) root->right = deleteNode(root->right, value);
+    else {
+        // Trường hợp tìm thấy nút cần xóa
+        if (root->left == NULL) {
+            Node* temp = root->right;
+            free(root);
+            return temp;
+        } else if (root->right == NULL) {
+            Node* temp = root->left;
+            free(root);
+            return temp;
+        } else {
+            // Nút có 2 con: tìm nút nhỏ nhất bên phải
+            Node* temp = findMin(root->right);
+            root->data = temp->data;
+            root->right = deleteNode(root->right, temp->data);
+        }
+    }
+    return root;
+}
+
+// Các kiểu duyệt cây
+void preorder(Node* root) { // NLR
+    if (root == NULL) return;
+    printf("%d ", root->data);
+    preorder(root->left);
+    preorder(root->right);
+}
+
+void inorder(Node* root) { // LNR
+    if (root == NULL) return;
+    inorder(root->left);
+    printf("%d ", root->data);
+    inorder(root->right);
+}
+
+void postorder(Node* root) { // LRN
+    if (root == NULL) return;
+    postorder(root->left);
+    postorder(root->right);
+    printf("%d ", root->data);
+}
+
+// Duyệt theo mức (Level-order) dùng Queue
+typedef struct Queue {
+    Node* nodes[100];
+    int front, rear;
+} Queue;
+
+void initQueue(Queue* q) {
+    q->front = q->rear = 0;
+}
+
+int isEmpty(Queue* q) {
+    return q->front == q->rear;
+}
+
+void enqueue(Queue* q, Node* node) {
+    q->nodes[q->rear++] = node;
+}
+
+Node* dequeue(Queue* q) {
+    return q->nodes[q->front++];
+}
+
+void levelOrder(Node* root) {
+    if (root == NULL) return;
+    Queue q;
+    initQueue(&q);
+    enqueue(&q, root);
+    while (!isEmpty(&q)) {
+        Node* current = dequeue(&q);
+        printf("%d ", current->data);
+        if (current->left) enqueue(&q, current->left);
+        if (current->right) enqueue(&q, current->right);
+    }
+}
+
+// Hàm tính chiều cao của cây
+int height(Node* root) {
+    if (root == NULL) return 0;
+    int leftHeight = height(root->left);
+    int rightHeight = height(root->right);
+    return (leftHeight > rightHeight ? leftHeight : rightHeight) + 1;
+}
+
+// Hàm tìm kiếm trong BST
+Node* search(Node* root, int value) {
+    if (root == NULL || root->data == value) return root;
+    if (value < root->data) return search(root->left, value);
+    else return search(root->right, value);
+}
+
+// Chương trình chính
+int main() {
+    Node* root = NULL;
+
+    // Chèn các phần tử vào BST
+    int values[] = {50, 30, 70, 20, 40, 60, 80};
+    int n = sizeof(values)/sizeof(values[0]);
+    for (int i = 0; i < n; i++) {
+        root = insert(root, values[i]);
+    }
+
+    printf("Duyet Pre-order: ");
+    preorder(root); printf("\n");
+
+    printf("Duyet In-order: ");
+    inorder(root); printf("\n");
+
+    printf("Duyet Post-order: ");
+    postorder(root); printf("\n");
+
+    printf("Duyet Level-order: ");
+    levelOrder(root); printf("\n");
+
+    printf("Chieu cao cay: %d\n", height(root));
+
+    // Tìm kiếm
+    int key = 40;
+    Node* found = search(root, key);
+    if (found) printf("Tim thay %d trong cay\n", key);
+    else printf("Khong tim thay %d\n", key);
+
+    // Xóa một nút
+    root = deleteNode(root, 30);
+    printf("Cay sau khi xoa 30 (In-order): ");
+    inorder(root); printf("\n");
+
+    return 0;
+}
+
 
 
 ======================================== ./tuana/Longest_Common_Subsequence.c ========================================
@@ -6197,5 +6565,6 @@ Output
 
 
 ======================================== ./tuana/TSP Lagre.c ========================================
+
 
 
